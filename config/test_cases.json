@@ -1,0 +1,42 @@
+[
+  {
+    "id": "TC01",
+    "type": "direct_query",
+    "student_id": "21010123",
+    "question": "Cho mình hỏi điều kiện để được gia hạn sách ở thư viện là gì?",
+    "expected_behavior": "Agent trả lời trực tiếp từ quy định thư viện trong System Prompt (3 điều kiện gia hạn, tối đa 2 lần, mỗi lần +7 ngày), không gọi Tool nào.",
+    "complexity": "Low"
+  },
+  {
+    "id": "TC02",
+    "type": "single_tool_query",
+    "student_id": "21010123",
+    "question": "Thư viện còn cuốn 'Nhập môn Học máy' không, nằm ở kệ nào?",
+    "expected_behavior": "Agent gọi 'search_book' với từ khóa 'Nhập môn Học máy', báo còn 2/3 bản rảnh tại Khu A, Tầng 2, Kệ A2-05.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC03",
+    "type": "borrow_status_check",
+    "student_id": "21010489",
+    "question": "MSSV của mình là 21010489. Mình đang mượn những sách nào, có cuốn nào sắp tới hạn hay bị phạt không?",
+    "expected_behavior": "Agent gọi 'get_borrow_record' với MSSV 21010489, liệt kê 2 cuốn đang mượn và chủ động cảnh báo 'Nguyên lý Marketing' quá hạn 14 ngày, phí phạt tạm tính 28.000đ, nhắc xử lý ngay.",
+    "complexity": "Medium"
+  },
+  {
+    "id": "TC04",
+    "type": "multi_step_reasoning",
+    "student_id": "21010245",
+    "question": "Mình là 21010245, gia hạn giúp mình tất cả sách đang mượn nhé.",
+    "expected_behavior": "Agent suy luận ReAct đa bước: gọi 'get_borrow_record' lấy danh sách sách, sau đó gọi 'renew_book' cho từng cuốn. Kết quả: 'Kinh tế vi mô' gia hạn thành công (hạn mới 29/09/2026); 'Deep Learning cơ bản' bị từ chối vì có người đặt giữ, hướng dẫn trả đúng hạn 19/09/2026.",
+    "complexity": "High"
+  },
+  {
+    "id": "TC05",
+    "type": "edge_case_handling",
+    "student_id": "21010489",
+    "question": "Gia hạn giúp mình cuốn 'Dế Mèn phiêu lưu ký' với, MSSV 21010489.",
+    "expected_behavior": "Agent tra hồ sơ rồi gọi 'renew_book', nhận kết quả REJECTED (HAS_OVERDUE) và từ chối lịch sự: nêu lý do đang quá hạn 'Nguyên lý Marketing', hướng dẫn trả sách + nộp phạt 28.000đ tại quầy trước; không bịa đặt là đã gia hạn thành công.",
+    "complexity": "Medium"
+  }
+]

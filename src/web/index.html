@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trợ lý Thư viện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+/* Design tokens — Modernist (TroLyThuVien-demo.html) */
+:root {
+  --color-bg: #f3f2f2;
+  --color-surface: #eae9e9;
+  --color-text: #201e1d;
+  --color-accent: #ec3013;
+  --color-divider: color-mix(in srgb, #201e1d 40%, transparent);
+  --color-neutral-100: #f8f4f4; --color-neutral-200: #eae7e7; --color-neutral-300: #d7d3d3;
+  --color-neutral-600: #7d7979; --color-neutral-700: #605d5d; --color-neutral-800: #444141;
+  --color-accent-100: #fff2ef; --color-accent-200: #ffe0d9; --color-accent-600: #dd2b0f;
+  --color-accent-700: #ae1800; --color-accent-800: #7c1405;
+  --font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--color-bg); color: var(--color-text); font-family: var(--font); font-size: 15px; line-height: 1.55; }
+[hidden] { display: none !important; }
+h2 { font-weight: 800; letter-spacing: -.015em; line-height: 1.12; }
+button { font-family: var(--font); color: var(--color-text); }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+@keyframes pulse { 0%, 100% { opacity: .25 } 50% { opacity: 1 } }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 800; font-size: 14px; line-height: 1.2;
+  background: transparent; border: 1px solid transparent; padding: 8px 14px; border-radius: 0; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.btn-primary:hover:not(:disabled) { background: var(--color-accent-600); }
+.btn-primary:active:not(:disabled) { background: var(--color-accent-700); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-ghost { color: var(--color-accent); padding-inline: 4px; }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.input { font: inherit; color: var(--color-text); caret-color: var(--color-accent); border-radius: 0; }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+.eyebrow { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: var(--color-neutral-700); }
+.rule { height: 2px; background: var(--color-divider); }
+
+/* ---------- Đăng nhập ---------- */
+.login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+.login-brand { background: var(--color-accent); color: var(--color-bg); padding: 48px 40px; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; }
+.login-brand .kicker, .login-brand .features { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; }
+.login-brand .features { display: grid; gap: 8px; letter-spacing: .1em; }
+.login-title { font-weight: 800; font-size: 58px; line-height: .98; letter-spacing: -.02em; }
+.login-brand .bar { height: 2px; background: var(--color-bg); margin: 24px 0; opacity: .9; }
+.login-brand .lead { font-size: 16px; max-width: 30ch; line-height: 1.5; }
+.login-form { padding: 48px 40px; display: flex; flex-direction: column; justify-content: center; gap: 24px; max-width: 520px; }
+.login-form h2 { font-size: 30px; margin: 10px 0 0; }
+.login-form p { margin: 8px 0 0; color: var(--color-neutral-700); }
+.field { display: grid; gap: 10px; }
+.field label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+#mssv { font-family: var(--mono); font-size: 18px; letter-spacing: .12em; padding: 12px 14px; background: transparent; border: 2px solid var(--color-text); width: 100%; }
+.error-box { background: var(--color-accent-200); border-left: 4px solid var(--color-accent); padding: 10px 12px; font-size: 14px; color: var(--color-accent-800); }
+.login-submit { justify-content: flex-start; padding: 14px 18px; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+.readers { display: grid; border-top: 2px solid var(--color-divider); }
+.reader { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: baseline; text-align: left; background: transparent; border: 0;
+  border-bottom: 1px solid var(--color-neutral-300); padding: 10px 2px; cursor: pointer; }
+.reader:hover { background: var(--color-neutral-200); }
+.reader .id { font-family: var(--mono); font-size: 14px; }
+.reader .who { font-size: 13px; color: var(--color-neutral-700); }
+.reader .who b { color: var(--color-text); }
+
+/* ---------- Khung chat ---------- */
+.app { display: flex; flex-direction: column; height: 100vh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 2px solid var(--color-text); flex-wrap: wrap; }
+.topbar .brand { font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+.topbar .meta { display: flex; align-items: center; gap: 12px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.topbar .sep { width: 1px; height: 14px; background: var(--color-divider); }
+.topbar .mock { color: var(--color-accent-700); font-weight: 600; }
+.body { flex: 1; display: grid; grid-template-columns: 288px minmax(0, 1fr); min-height: 0; }
+.sidebar { border-right: 2px solid var(--color-divider); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow: auto; }
+.reader-name { font-weight: 800; font-size: 20px; margin-top: 6px; }
+.reader-id { font-family: var(--mono); font-size: 13px; color: var(--color-neutral-700); }
+.stat { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--color-neutral-300); font-size: 13px; }
+.stat span { color: var(--color-neutral-700); }
+.stat .alert { color: var(--color-accent-700); }
+.samples { display: grid; gap: 8px; margin-top: 10px; }
+.sample { text-align: left; background: transparent; border: 1px solid var(--color-divider); padding: 10px 12px; font-size: 13px; line-height: 1.4; cursor: pointer; }
+.sample:hover:not(:disabled) { background: var(--color-accent-100); border-color: var(--color-accent); }
+.sample:disabled { opacity: .5; cursor: not-allowed; }
+.side-actions { margin-top: auto; display: grid; gap: 8px; }
+.side-actions .btn { justify-content: flex-start; }
+.main { display: flex; flex-direction: column; min-height: 0; }
+.messages { flex: 1; overflow: auto; padding: 28px 32px; }
+.msg { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 20px; padding: 20px 0; border-bottom: 1px solid var(--color-neutral-300); }
+.msg-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; color: var(--color-accent); }
+.msg.user .msg-label { color: var(--color-neutral-700); }
+.msg-body { min-width: 0; }
+.msg.user .msg-text { font-weight: 600; white-space: pre-wrap; }
+.msg-text { font-size: 15.5px; line-height: 1.62; text-wrap: pretty; overflow-wrap: anywhere; }
+.msg-text p { margin: 0 0 8px; }
+.msg-text ul, .msg-text ol { margin: 0 0 8px; padding-left: 22px; }
+.msg-text li { margin: 2px 0; }
+.msg-text hr { border: 0; height: 1px; background: var(--color-neutral-300); margin: 12px 0; }
+.msg-text code { font-family: var(--mono); font-size: 13px; background: var(--color-neutral-200); padding: 1px 5px; }
+.msg-text .md-h { font-size: 15.5px; font-weight: 800; margin: 10px 0 6px; }
+.msg-text > :last-child { margin-bottom: 0; }
+.msg.error .msg-text { background: var(--color-accent-200); border-left: 4px solid var(--color-accent); padding: 10px 12px; font-size: 14px; color: var(--color-accent-800); }
+.trace { border: 1px solid var(--color-divider); margin-bottom: 14px; }
+.trace-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--color-neutral-200); border: 0;
+  padding: 9px 12px; cursor: pointer; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+.trace-toggle:hover { background: var(--color-neutral-300); }
+.trace-toggle .caret { font-family: var(--mono); }
+.trace-steps { padding: 4px 12px 12px; }
+.step { border-left: 2px solid var(--color-accent); padding: 10px 0 10px 14px; margin-top: 10px; }
+.step-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.step-tag { font-family: var(--mono); font-size: 11px; background: var(--color-accent); color: var(--color-bg); padding: 1px 6px; }
+.step-kind { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.step-latency { font-family: var(--mono); font-size: 11px; color: var(--color-neutral-600); margin-left: auto; }
+.step-thought { font-size: 13px; line-height: 1.5; margin-top: 8px; overflow-wrap: anywhere; }
+.step-action { margin-top: 8px; font-size: 12.5px; font-family: var(--mono); background: var(--color-neutral-200); padding: 8px 10px; white-space: pre-wrap; word-break: break-word; }
+.step-obs { margin: 6px 0 0; font-size: 12px; font-family: var(--mono); color: var(--color-neutral-800); background: var(--color-neutral-100);
+  border: 1px solid var(--color-neutral-300); padding: 8px 10px; max-height: 260px; overflow: auto; white-space: pre-wrap; }
+.running { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 20px; padding: 20px 0; }
+.running .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--color-neutral-700); }
+.running .dot { width: 8px; height: 8px; flex: none; background: var(--color-accent); animation: pulse 1s infinite; }
+.composer { border-top: 2px solid var(--color-text); padding: 14px 32px; display: flex; gap: 12px; align-items: stretch; background: var(--color-bg); }
+#draft { flex: 1; min-width: 0; font-size: 15px; padding: 12px 14px; background: transparent; border: 1px solid var(--color-divider); }
+.send { padding: 12px 20px; letter-spacing: .06em; text-transform: uppercase; }
+
+@media (max-width: 860px) {
+  .login { grid-template-columns: 1fr; }
+  .login-brand { padding: 32px 20px; gap: 24px; }
+  .login-title { font-size: 42px; }
+  .login-form { padding: 32px 20px; max-width: none; }
+  .app { height: auto; min-height: 100vh; }
+  .body { grid-template-columns: 1fr; }
+  .sidebar { border-right: 0; border-bottom: 2px solid var(--color-divider); }
+  .messages { padding: 16px 20px; }
+  .msg, .running { grid-template-columns: 1fr; gap: 6px; }
+  .composer { padding: 12px 20px; position: sticky; bottom: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- Trang đăng nhập bằng MSSV -->
+<section id="login-screen" class="login">
+  <div class="login-brand">
+    <div class="kicker">QĐ-TV-01 · Thư viện Đại học</div>
+    <div>
+      <div class="login-title">TRỢ LÝ<br>THƯ VIỆN</div>
+      <div class="bar"></div>
+      <div class="lead">Tra vị trí sách, tình trạng mượn–trả và gia hạn tài liệu — trực tuyến, không phải ra quầy.</div>
+    </div>
+    <div class="features">
+      <div>01 · Tra cứu vị trí sách</div>
+      <div>02 · Tình trạng mượn / trả</div>
+      <div>03 · Gia hạn &amp; đặt giữ</div>
+    </div>
+  </div>
+  <form id="login-form" class="login-form" autocomplete="off">
+    <div>
+      <div class="eyebrow">Đăng nhập độc giả</div>
+      <h2>Nhập mã số sinh viên</h2>
+      <p>MSSV gồm 8 chữ số, đồng thời là mã thẻ thư viện.</p>
+    </div>
+    <div class="rule"></div>
+    <div class="field">
+      <label for="mssv">MSSV</label>
+      <input id="mssv" class="input" placeholder="21010123" maxlength="8" inputmode="numeric">
+      <div id="login-error" class="error-box" hidden></div>
+    </div>
+    <button id="login-btn" class="btn btn-primary login-submit" type="submit">Đăng nhập →</button>
+    <div>
+      <div class="eyebrow" style="margin-bottom: 10px">MSSV thử nghiệm</div>
+      <div id="readers" class="readers"></div>
+    </div>
+  </form>
+</section>
+
+<!-- Khung chat với Agent -->
+<section id="chat-screen" class="app" hidden>
+  <header class="topbar">
+    <div style="display: flex; align-items: baseline; gap: 14px">
+      <span class="brand">TRỢ LÝ THƯ VIỆN</span>
+      <span class="eyebrow">ReAct Agent · MCP Server</span>
+    </div>
+    <div class="meta">
+      <span id="today-label"></span>
+      <span class="sep"></span>
+      <span id="provider-label"></span>
+    </div>
+  </header>
+  <div class="body">
+    <aside class="sidebar">
+      <div>
+        <div class="eyebrow">Độc giả</div>
+        <div id="reader-name" class="reader-name"></div>
+        <div id="reader-id" class="reader-id"></div>
+      </div>
+      <div class="rule"></div>
+      <div>
+        <div class="stat"><span>Đang mượn</span><b id="stat-borrowed">—</b></div>
+        <div class="stat"><span>Sắp tới hạn</span><b id="stat-due-soon">—</b></div>
+        <div class="stat"><span>Quá hạn</span><b id="stat-overdue" class="alert">—</b></div>
+        <div class="stat"><span>Phí phạt</span><b id="stat-fine">—</b></div>
+      </div>
+      <div>
+        <div class="eyebrow">Câu hỏi mẫu</div>
+        <div id="samples" class="samples"></div>
+      </div>
+      <div class="side-actions">
+        <button id="clear-btn" class="btn btn-secondary" type="button">Xóa hội thoại</button>
+        <button id="logout-btn" class="btn btn-ghost" type="button">Đăng xuất</button>
+      </div>
+    </aside>
+    <main class="main">
+      <div id="messages" class="messages"></div>
+      <form id="composer" class="composer" autocomplete="off">
+        <input id="draft" class="input" placeholder="Hỏi về sách, hạn trả, gia hạn…">
+        <button id="send-btn" class="btn btn-primary send" type="submit" disabled>Gửi</button>
+      </form>
+    </main>
+  </div>
+</section>
+
+<script>
+const SAMPLES = [
+  "Điều kiện để được gia hạn sách là gì?",
+  "Còn cuốn 'Nhập môn Học máy' không, nằm ở kệ nào?",
+  "Mình đang mượn gì, có bị phạt không?",
+  "Gia hạn giúp mình tất cả sách đang mượn.",
+  "Còn cuốn 'Deep Learning cơ bản' không?"
+];
+const WAIT_LABEL = "Agent đang suy luận… (nếu vượt giới hạn tốc độ của Gemini miễn phí, có thể phải chờ tới 1 phút)";
+
+const $ = (id) => document.getElementById(id);
+const state = { info: null, token: null, student: null, messages: [], running: false };
+
+// ---------- Tiện ích ----------
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function inlineMd(s) {
+  return s.replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+}
+// Hiển thị Markdown cơ bản trong câu trả lời của LLM (đã escape HTML trước)
+function renderMarkdown(text) {
+  let html = "", list = null;
+  const close = () => { if (list) { html += `</${list}>`; list = null; } };
+  for (const raw of escapeHtml(text || "").split("\n")) {
+    const line = raw.trimEnd();
+    let m;
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { close(); html += "<hr>"; }
+    else if ((m = line.match(/^#{1,6}\s+(.*)$/))) { close(); html += `<div class="md-h">${inlineMd(m[1])}</div>`; }
+    else if ((m = line.match(/^\s*[-*•·]\s+(.*)$/))) {
+      if (list !== "ul") { close(); html += "<ul>"; list = "ul"; }
+      html += `<li>${inlineMd(m[1])}</li>`;
+    } else if ((m = line.match(/^\s*(\d+)[.)]\s+(.*)$/))) {
+      if (list !== "ol") { close(); html += `<ol start="${m[1]}">`; list = "ol"; }
+      html += `<li>${inlineMd(m[2])}</li>`;
+    } else if (!line.trim()) { close(); }
+    else { close(); html += `<p>${inlineMd(line)}</p>`; }
+  }
+  close();
+  return html;
+}
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Lỗi máy chủ (${res.status}).`);
+  return data;
+}
+
+// ---------- Đăng nhập ----------
+function showLoginError(msg) {
+  $("login-error").textContent = msg;
+  $("login-error").hidden = !msg;
+}
+function renderReaders() {
+  const box = $("readers");
+  box.replaceChildren();
+  for (const r of state.info.readers) {
+    const btn = el("button", "reader");
+    btn.type = "button";
+    btn.append(el("span", "id", r.id));
+    const who = el("span", "who");
+    who.append(el("b", "", r.name), document.createTextNode(r.note ? " — " + r.note : ""));
+    btn.append(who);
+    btn.addEventListener("click", () => { $("mssv").value = r.id; showLoginError(""); $("mssv").focus(); });
+    box.append(btn);
+  }
+}
+async function doLogin(event) {
+  event.preventDefault();
+  const id = $("mssv").value.trim();
+  if (!/^\d{8}$/.test(id)) return showLoginError("MSSV phải gồm đúng 8 chữ số.");
+  $("login-btn").disabled = true;
+  try {
+    const data = await api("/api/login", { student_id: id });
+    state.token = data.token;
+    state.student = data.student;
+    state.messages = [welcomeMessage()];
+    updateStats(data.stats);
+    showChat();
+  } catch (e) {
+    showLoginError(e.message);
+  } finally {
+    $("login-btn").disabled = false;
+  }
+}
+function welcomeMessage() {
+  return { role: "agent", text: `Xin chào ${state.student.full_name}. Mình có thể tra vị trí sách, kiểm tra tình trạng mượn–trả và gia hạn tài liệu cho bạn. Hôm nay là ${state.info.today}.` };
+}
+
+// ---------- Khung chat ----------
+function showChat() {
+  $("login-screen").hidden = true;
+  $("chat-screen").hidden = false;
+  $("reader-name").textContent = state.student.full_name;
+  $("reader-id").textContent = state.student.student_id;
+  renderMessages();
+  $("draft").focus();
+}
+function showLogin() {
+  $("chat-screen").hidden = true;
+  $("login-screen").hidden = false;
+  $("mssv").value = "";
+  showLoginError("");
+  $("mssv").focus();
+}
+function updateStats(stats) {
+  if (!stats) return;
+  $("stat-borrowed").textContent = stats.borrowed;
+  $("stat-due-soon").textContent = stats.due_soon;
+  $("stat-overdue").textContent = stats.overdue;
+  $("stat-fine").textContent = stats.fine;
+}
+function renderTrace(msg) {
+  const box = el("div", "trace");
+  const toggle = el("button", "trace-toggle");
+  toggle.type = "button";
+  toggle.append(el("span", "", `Chuỗi ReAct · ${msg.trace.length} bước`), el("span", "caret", msg.open ? "—" : "+"));
+  toggle.addEventListener("click", () => { msg.open = !msg.open; renderMessages(false); });
+  box.append(toggle);
+  if (msg.open) {
+    const steps = el("div", "trace-steps");
+    for (const entry of msg.trace) {
+      const step = el("div", "step");
+      const head = el("div", "step-head");
+      const isTool = entry.action_type === "TOOL_EXECUTION";
+      const latency = isTool ? `LLM ${entry.latency_ms} ms · Tool ${entry.tool_latency_ms ?? 0} ms` : `${entry.latency_ms} ms`;
+      head.append(el("span", "step-tag", `STEP ${entry.step}`), el("span", "step-kind", entry.action_type), el("span", "step-latency", latency));
+      step.append(head);
+      const thought = el("div", "step-thought");
+      thought.append(el("b", "", "Thought"), document.createTextNode(" · " + (entry.thought || "")));
+      step.append(thought);
+      if (isTool) {
+        step.append(el("div", "step-action", `call_tool → ${entry.tool_name}(${JSON.stringify(entry.arguments)})`));
+        step.append(el("pre", "step-obs", JSON.stringify(entry.observation, null, 2)));
+      }
+      steps.append(step);
+    }
+    box.append(steps);
+  }
+  return box;
+}
+function renderMessages(scroll = true) {
+  const box = $("messages");
+  box.replaceChildren();
+  for (const msg of state.messages) {
+    const row = el("div", "msg " + msg.role);
+    row.append(el("div", "msg-label", msg.role === "user" ? "Độc giả" : "Agent"));
+    const body = el("div", "msg-body");
+    if (msg.trace && msg.trace.length) body.append(renderTrace(msg));
+    const text = el("div", "msg-text");
+    if (msg.role === "agent") text.innerHTML = renderMarkdown(msg.text);
+    else text.textContent = msg.text;
+    body.append(text);
+    row.append(body);
+    box.append(row);
+  }
+  if (state.running) {
+    const row = el("div", "running");
+    row.append(el("div", "msg-label", "Agent"));
+    const status = el("div", "status");
+    status.append(el("span", "dot"), el("span", "", WAIT_LABEL));
+    row.append(status);
+    box.append(row);
+  }
+  if (scroll) box.scrollTop = box.scrollHeight;
+  updateControls();
+}
+function updateControls() {
+  $("send-btn").disabled = state.running || !$("draft").value.trim();
+  $("draft").disabled = state.running;
+  for (const btn of document.querySelectorAll(".sample")) btn.disabled = state.running;
+}
+async function ask(question) {
+  question = (question || "").trim();
+  if (state.running || !question) return;
+  state.messages.push({ role: "user", text: question });
+  state.running = true;
+  $("draft").value = "";
+  renderMessages();
+  try {
+    const data = await api("/api/chat", { token: state.token, message: question });
+    state.messages.push({ role: "agent", text: data.answer, trace: data.trace, open: false });
+    updateStats(data.stats);
+  } catch (e) {
+    state.messages.push({ role: "error", text: e.message });
+  } finally {
+    state.running = false;
+    renderMessages();
+    $("draft").focus();
+  }
+}
+
+// ---------- Khởi tạo ----------
+async function init() {
+  state.info = await api("/api/info");
+  $("today-label").textContent = "Hôm nay " + state.info.today;
+  $("provider-label").textContent = state.info.provider;
+  $("provider-label").classList.toggle("mock", state.info.is_mock);
+  renderReaders();
+  const samples = $("samples");
+  for (const q of SAMPLES) {
+    const btn = el("button", "sample", q);
+    btn.type = "button";
+    btn.addEventListener("click", () => ask(q));
+    samples.append(btn);
+  }
+  $("login-form").addEventListener("submit", doLogin);
+  $("mssv").addEventListener("input", () => showLoginError(""));
+  $("composer").addEventListener("submit", (e) => { e.preventDefault(); ask($("draft").value); });
+  $("draft").addEventListener("input", updateControls);
+  $("clear-btn").addEventListener("click", async () => {
+    await api("/api/clear", { token: state.token }).catch(() => {});
+    state.messages = [];
+    renderMessages();
+  });
+  $("logout-btn").addEventListener("click", async () => {
+    await api("/api/logout", { token: state.token }).catch(() => {});
+    Object.assign(state, { token: null, student: null, messages: [] });
+    showLogin();
+  });
+  $("mssv").focus();
+}
+init().catch((e) => showLoginError("Không kết nối được máy chủ: " + e.message));
+</script>
+</body>
+</html>

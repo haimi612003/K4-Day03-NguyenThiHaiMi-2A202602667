@@ -17,11 +17,11 @@ if sys.stdout.encoding != 'utf-8':
     except Exception:
         pass
 
-from mcp_server import MCPAcademicServer
+from mcp_server import MCPLibraryServer
 from prompts import (
     CHATBOT_BASELINE_PROMPT,
-    REACT_AGENT_SYSTEM_PROMPT,
-    MAX_ITERATIONS
+    MAX_ITERATIONS,
+    build_react_system_prompt
 )
 from providers import get_llm_provider
 
@@ -54,6 +54,18 @@ def save_waterfall_trace(trace_data: list):
     print(f"📊 [OBSERVABILITY]: Đã lưu {len(trace_data)} sự kiện Waterfall Trace tại '{trace_path}'!")
 
 
+def login(mcp_server: MCPLibraryServer, student_id: str):
+    """
+    Xác định độc giả bằng MSSV trước khi vào hệ thống.
+    Trả về (student, None) nếu hợp lệ, hoặc (None, thông báo lỗi).
+    """
+    student_id = str(student_id).strip()
+    result = mcp_server.call_tool("get_borrow_record", {"student_id": student_id}, caller_id=student_id).get("result", {})
+    if result.get("status") != "SUCCESS":
+        return None, result.get("message", "MSSV không hợp lệ.")
+    return {"student_id": student_id, "full_name": result["full_name"]}, None
+
+
 def run_baseline_chatbot(user_query: str, provider):
     """Chạy Chatbot gốc (Cấp 2) không có công cụ gọi Tool"""
     print(f"\n💬 [CHATBOT BASELINE] Câu hỏi: {user_query}")
@@ -61,32 +73,42 @@ def run_baseline_chatbot(user_query: str, provider):
     print(f"🤖 Chatbot phản hồi:\n{response}")
 
 
-def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) -> list:
+def run_react_agent(user_query: str, provider, mcp_server: MCPLibraryServer, history: list = None, student: dict = None) -> list:
     """
-    [REACT AGENT LOOP] Thực thi vòng lặp Thought -> Action -> Observation với MCP Server
+    [REACT AGENT LOOP] Thực thi vòng lặp Thought -> Action -> Observation với MCP Server.
+    Kết quả Observation được nạp lại vào hội thoại để LLM suy luận bước tiếp theo,
+    cho tới khi LLM đưa ra câu trả lời cuối (Final Answer) hoặc hết MAX_ITERATIONS.
+    history: lịch sử hội thoại dùng chung giữa các lượt (chế độ interactive). None = phiên mới.
+    student: độc giả đang đăng nhập {"student_id", "full_name"}; MCP Server chỉ cho thao tác trên hồ sơ của người này.
     Trả về danh sách trace log của phiên thực thi.
     """
     print(f"\n🤖 [REACT AGENT] Câu hỏi: {user_query}")
-    
+
+    system_prompt = build_react_system_prompt(student)
+    caller_id = student["student_id"] if student else None
+    messages = history if history is not None else []
+    messages.append({"role": "user", "content": user_query})
     step = 0
     trace_logs = []
     tools_list = mcp_server.list_tools()
-    
+
     while step < MAX_ITERATIONS:
         step += 1
         step_start_time = time.time()
         print(f"\n--- 🔄 Vòng lặp ReAct Loop (Step {step}/{MAX_ITERATIONS}) ---")
-        
-        # Gọi LLM với Native Tool Calling Specs
-        llm_response = provider.generate_with_tools(user_query, tools_list, system_prompt=REACT_AGENT_SYSTEM_PROMPT)
-        latency_ms = round((time.time() - step_start_time) * 1000, 2)
-        
+
+        # Gọi LLM với Native Tool Calling Specs + toàn bộ hội thoại (kèm các Observation trước đó)
+        llm_response = provider.generate_with_tools(messages, tools_list, system_prompt=system_prompt)
+        # Không tính thời gian chờ do giới hạn tốc độ API (rate limit) vào độ trễ suy luận
+        latency_ms = round((time.time() - step_start_time) * 1000 - llm_response.get("wait_ms", 0), 2)
+
         thought = llm_response.get("thought", "Đang suy luận...")
         print(f"🧠 [Thought]: {thought}")
-        
-        # Trường hợp 1: LLM quyết định trả lời bằng văn bản trực tiếp
+
+        # Trường hợp 1: LLM quyết định trả lời bằng văn bản → kết thúc vòng lặp
         if llm_response.get("type") == "text":
             final_content = llm_response.get("content", "")
+            messages.append({"role": "assistant", "content": final_content})
             print(f"🏁 [Final Answer]: {final_content}")
             trace_logs.append({
                 "step": step,
@@ -96,69 +118,48 @@ def run_react_agent(user_query: str, provider, mcp_server: MCPAcademicServer) ->
                 "output": final_content,
                 "latency_ms": latency_ms
             })
-            break
-            
-        # Trường hợp 2: LLM đề xuất gọi Tool (Action)
-        elif llm_response.get("type") == "tool_call":
-            tool_name = llm_response.get("tool_name")
-            arguments = llm_response.get("arguments", {})
-            
-            print(f"🛠️ [Action Proposed]: {tool_name}({arguments})")
-            
+            return trace_logs
+
+        # Trường hợp 2: LLM đề xuất gọi một hoặc nhiều Tool (Action)
+        tool_calls = llm_response.get("tool_calls", [])
+        messages.append({"role": "assistant", "tool_calls": tool_calls, "raw": llm_response.get("raw")})
+
+        for call in tool_calls:
+            print(f"🛠️ [Action Proposed]: {call['name']}({json.dumps(call['arguments'], ensure_ascii=False)})")
+
             # Thực thi Tool qua MCP Server
-            mcp_result = mcp_server.call_tool(tool_name, arguments)
+            tool_start_time = time.time()
+            mcp_result = mcp_server.call_tool(call["name"], call["arguments"], caller_id=caller_id)
+            tool_latency_ms = round((time.time() - tool_start_time) * 1000, 2)
             obs_data = mcp_result.get("result", {})
-            
-            if not obs_data:
-                print(f"👁️ [Observation từ MCP Server]: {{}}")
-                print(f"⚠️ [CHÚ Ý]: MCP Server trả về kết quả rỗng! Học viên cần hoàn thành TODO 2.1 trong 'src/mcp_server.py'.")
-                final_answer = "Chưa thể trả lời chi tiết do chưa nhận được dữ liệu từ MCP Server (hãy hoàn thành TODO 2.1)."
-            else:
-                obs_str = json.dumps(obs_data, ensure_ascii=False)
-                print(f"👁️ [Observation từ MCP Server]: {obs_str}")
-                
-                # Tổng hợp Final Answer từ kết quả Observation thực tế
-                if obs_data.get("status") == "SUCCESS":
-                    if "data" in obs_data:
-                        d = obs_data["data"]
-                        final_answer = (
-                            f"Kết quả tra cứu cho sinh viên {obs_data.get('student_id', '')} ({d.get('full_name', '')}): "
-                            f"Lớp {d.get('class', '')}, GPA: {d.get('gpa', '')}, Email: {d.get('email', '')}, "
-                            f"Trạng thái: {d.get('status', '')}, Cố vấn: {d.get('advisor', '')}."
-                        )
-                    elif "message" in obs_data:
-                        final_answer = obs_data["message"]
-                    else:
-                        final_answer = f"Đã hoàn tất xử lý qua MCP Server: {json.dumps(obs_data, ensure_ascii=False)}"
-                elif obs_data.get("status") == "NOT_FOUND":
-                    final_answer = obs_data.get("message", "Không tìm thấy thông tin sinh viên yêu cầu.")
-                else:
-                    final_answer = f"Phản hồi từ công cụ: {json.dumps(obs_data, ensure_ascii=False)}"
-            
+            print(f"👁️ [Observation từ MCP Server]: {json.dumps(obs_data, ensure_ascii=False)}")
+
+            # Nạp Observation lại vào hội thoại cho lượt suy luận kế tiếp
+            messages.append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": obs_data})
             trace_logs.append({
                 "step": step,
                 "query": user_query,
                 "action_type": "TOOL_EXECUTION",
-                "tool_name": tool_name,
-                "arguments": arguments,
+                "thought": thought,
+                "tool_name": call["name"],
+                "arguments": call["arguments"],
                 "observation": obs_data,
-                "latency_ms": latency_ms
+                "latency_ms": latency_ms,
+                "tool_latency_ms": tool_latency_ms
             })
-            
-            # Kết thúc vòng lặp sau khi hoàn tất Observation và xuất Final Answer
-            print(f"🧠 [Thought]: Đã nhận được dữ liệu từ MCP Server. Tổng hợp kết quả phản hồi.")
-            print(f"🏁 [Final Answer]: {final_answer}")
-            
-            trace_logs.append({
-                "step": step + 1,
-                "query": user_query,
-                "action_type": "FINAL_ANSWER",
-                "thought": "Tổng hợp kết quả từ MCP Server thành công.",
-                "output": final_answer,
-                "latency_ms": 10.0
-            })
-            break
 
+    # Hết số vòng lặp cho phép mà LLM chưa đưa ra câu trả lời cuối
+    final_content = f"Xin lỗi, mình chưa hoàn tất được yêu cầu trong giới hạn {MAX_ITERATIONS} bước xử lý. Bạn vui lòng thử lại."
+    messages.append({"role": "assistant", "content": final_content})
+    print(f"⚠️ [MAX_ITERATIONS]: {final_content}")
+    trace_logs.append({
+        "step": step,
+        "query": user_query,
+        "action_type": "MAX_ITERATIONS_REACHED",
+        "thought": f"Đã chạy đủ {MAX_ITERATIONS} vòng lặp ReAct mà chưa có câu trả lời cuối.",
+        "output": final_content,
+        "latency_ms": 0.0
+    })
     return trace_logs
 
 
@@ -168,7 +169,7 @@ if __name__ == "__main__":
     print("==========================================================")
     
     provider = get_llm_provider()
-    mcp_server = MCPAcademicServer()
+    mcp_server = MCPLibraryServer()
     
     print(f"🔌 LLM Provider: {provider.__class__.__name__}")
     print(f"🌐 MCP Server: {mcp_server.server_name}\n")
@@ -179,18 +180,32 @@ if __name__ == "__main__":
     if "--interactive" in sys.argv:
         print("🎮 [INTERACTIVE MODE] Trò chuyện trực tiếp với ReAct Agent:")
         print("💡 Gợi ý câu hỏi thử nghiệm:")
-        print("   - Câu hỏi chung: 'Quy chế học vụ VinUni yêu cầu bao nhiêu tín chỉ?'")
-        print("   - Tra cứu học vụ: 'Hãy tra cứu thông tin học vụ của sinh viên SV2026001'")
-        print("   - Đặt lịch hẹn: 'Đặt lịch hẹn tư vấn cho SV2026001 vào 14:00 ngày 15/09/2026'")
+        print("   - Tra cứu vị trí sách: 'Thư viện còn cuốn \"Deep Learning cơ bản\" không, ở kệ nào?'")
+        print("   - Kiểm tra mượn/trả: 'Mình đang mượn những sách nào, có bị phạt không?'")
+        print("   - Gia hạn tài liệu: 'Gia hạn giúp mình tất cả sách đang mượn'")
         print("   - Gõ 'exit' hoặc 'quit' để kết thúc phiên trò chuyện.\n")
-        while True:
+        student = None
+        try:
+            # Đăng nhập bằng MSSV trước khi trò chuyện
+            while student is None:
+                entered = input("🔑 Nhập MSSV để đăng nhập: ").strip()
+                if not entered or entered.lower() in ["exit", "quit"]:
+                    break
+                student, error = login(mcp_server, entered)
+                print(f"✅ Xin chào {student['full_name']} (MSSV {student['student_id']})!\n" if student else f"❌ {error}")
+        except (KeyboardInterrupt, EOFError):
+            pass
+        history = []       # Lịch sử hội thoại dùng chung giữa các lượt để Agent nhớ ngữ cảnh
+        session_logs = []
+        while student:
             try:
                 user_input = input("👤 Sinh viên hỏi: ").strip()
                 if not user_input or user_input.lower() in ["exit", "quit"]:
                     print("👋 Tạm biệt! Kết thúc phiên trò chuyện.")
                     break
-                logs = run_react_agent(user_input, provider, mcp_server)
-                save_waterfall_trace(logs)
+                logs = run_react_agent(user_input, provider, mcp_server, history, student)
+                session_logs.extend(logs)
+                save_waterfall_trace(session_logs)
             except (KeyboardInterrupt, EOFError):
                 print("\n👋 Đã thoát phiên tương tác.")
                 break
@@ -211,7 +226,10 @@ if __name__ == "__main__":
                 print(f"   👉 Hãy mở file 'config/test_cases.json' để viết câu hỏi thực tế cho Test Case này!")
                 todo_count += 1
             else:
-                logs = run_react_agent(tc["question"], provider, mcp_server)
+                # Mỗi test case chạy với phiên đăng nhập của độc giả trong trường 'student_id'
+                student = login(mcp_server, tc["student_id"])[0] if tc.get("student_id") else None
+                print(f"🔑 Đăng nhập: {student['full_name']} (MSSV {student['student_id']})" if student else "🔑 Không đăng nhập")
+                logs = run_react_agent(tc["question"], provider, mcp_server, student=student)
                 all_traces.extend(logs)
                 completed_count += 1
                 
@@ -226,8 +244,9 @@ if __name__ == "__main__":
         print("  1. Chat trực tiếp liên tục:   python src/app.py --interactive")
         print("  2. Chạy toàn bộ Test Cases:    python src/app.py --all\n")
         
-        sample_query = tests[1]["question"]
-        print(f"--- 🏁 DEMO CHẠY THỬ 1 TEST CASE MẪU (TC02: Tra cứu học vụ) ---")
-        logs = run_react_agent(sample_query, provider, mcp_server)
+        sample = tests[1]
+        print(f"--- 🏁 DEMO CHẠY THỬ 1 TEST CASE MẪU ({sample['id']}) ---")
+        student = login(mcp_server, sample["student_id"])[0] if sample.get("student_id") else None
+        logs = run_react_agent(sample["question"], provider, mcp_server, student=student)
         save_waterfall_trace(logs)
         print("\n💡 Hãy thử ngay lệnh: python src/app.py --interactive để chat trực tiếp!")

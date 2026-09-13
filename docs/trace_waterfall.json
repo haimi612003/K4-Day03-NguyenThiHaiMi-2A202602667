@@ -1,29 +1,350 @@
 [
   {
     "step": 1,
-    "query": "Chào bạn, bạn có thể giới thiệu quy chế học vụ cơ bản của Đại học VinUni không?",
+    "query": "Cho mình hỏi điều kiện để được gia hạn sách ở thư viện là gì?",
     "action_type": "FINAL_ANSWER",
-    "thought": "Câu hỏi chung về quy chế học vụ, trả lời trực tiếp không cần gọi Tool.",
-    "output": "[Mock Agent Response]: Xin chào! Quy chế học vụ VinUni yêu cầu sinh viên tích lũy tối thiểu 120 tín chỉ và duy trì GPA trên 2.0 để tốt nghiệp.",
-    "latency_ms": 2845.93
+    "thought": "Gemini tổng hợp câu trả lời bằng văn bản (không cần gọi thêm công cụ).",
+    "output": "Theo quy định của thư viện (QĐ-TV-01), bạn có thể gia hạn sách tối đa **2 lần/cuốn** (mỗi lần cộng thêm **7 ngày** tính từ hạn trả hiện tại) khi thỏa mãn **ĐỒNG THỜI 3 điều kiện** sau:\n\n1. **Không có độc giả khác đang đặt giữ** cuốn sách đó.\n2. **Không có bất kỳ cuốn sách nào đang quá hạn** trong tài khoản của bạn (kể cả cuốn bạn muốn gia hạn).\n3. Cuốn sách đó **chưa gia hạn đủ 2 lần**.\n\n Nếu cần kiểm tra sách đang mượn hoặc gia hạn trực tuyến, bạn chỉ cần báo mình hỗ trợ nhé!",
+    "latency_ms": 4483.95
   },
   {
     "step": 1,
-    "query": "Hãy tra cứu thông tin học vụ của sinh viên SV2026001.",
+    "query": "Thư viện còn cuốn 'Nhập môn Học máy' không, nằm ở kệ nào?",
     "action_type": "TOOL_EXECUTION",
-    "tool_name": "academic_query",
+    "thought": "Gemini quyết định gọi công cụ: search_book({\"keyword\": \"Nhập môn Học máy\", \"topic\": \"Trí tuệ nhân tạo\"})",
+    "tool_name": "search_book",
     "arguments": {
-      "student_id": "SV2026001"
+      "keyword": "Nhập môn Học máy",
+      "topic": "Trí tuệ nhân tạo"
     },
-    "observation": {},
-    "latency_ms": 799.12
+    "observation": {
+      "status": "SUCCESS",
+      "today": "15/09/2026",
+      "results": [
+        {
+          "book_id": "B001",
+          "title": "Nhập môn Học máy",
+          "author": "Nguyễn Văn Hùng",
+          "topic": "Trí tuệ nhân tạo",
+          "category": "Sách giáo trình, tham khảo",
+          "loanable": true,
+          "total_copies": 3,
+          "available_copies": 2,
+          "location": {
+            "khu": "A",
+            "tang": 2,
+            "ke": "A2-05"
+          }
+        }
+      ]
+    },
+    "latency_ms": 2574.18,
+    "tool_latency_ms": 0.17
   },
   {
     "step": 2,
-    "query": "Hãy tra cứu thông tin học vụ của sinh viên SV2026001.",
+    "query": "Thư viện còn cuốn 'Nhập môn Học máy' không, nằm ở kệ nào?",
     "action_type": "FINAL_ANSWER",
-    "thought": "Tổng hợp kết quả từ MCP Server thành công.",
-    "output": "Chưa thể trả lời chi tiết do chưa nhận được dữ liệu từ MCP Server (hãy hoàn thành TODO 2.1).",
-    "latency_ms": 10.0
+    "thought": "Gemini tổng hợp câu trả lời bằng văn bản (không cần gọi thêm công cụ).",
+    "output": "Thư viện **hiện còn 2 bản rảnh** (trên tổng số 3 bản) của cuốn sách **\"Nhập môn Học máy\"** (Tác giả: Nguyễn Văn Hùng).\n\n📍 **Vị trí sách:**\n* **Khu:** A\n* **Tầng:** 2\n* **Kệ:** A2-05\n\n📚 Sách thuộc loại giáo trình/tham khảo và **được phép mượn về**. Bạn có thể đến vị trí trên để lấy sách nhé!",
+    "latency_ms": 4035.76
+  },
+  {
+    "step": 1,
+    "query": "MSSV của mình là 21010489. Mình đang mượn những sách nào, có cuốn nào sắp tới hạn hay bị phạt không?",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: get_borrow_record({\"student_id\": \"21010489\"})",
+    "tool_name": "get_borrow_record",
+    "arguments": {
+      "student_id": "21010489"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "today": "15/09/2026",
+      "student_id": "21010489",
+      "full_name": "Vũ Đức Huy",
+      "account_locked": false,
+      "lock_reason": null,
+      "borrowed_count": 2,
+      "max_books": 5,
+      "loans": [
+        {
+          "book_id": "B005",
+          "title": "Nguyên lý Marketing",
+          "borrow_date": "18/08/2026",
+          "due_date": "01/09/2026",
+          "days_left": -14,
+          "status": "OVERDUE",
+          "overdue_days": 14,
+          "fine_estimate": 28000,
+          "renewals_used": 0,
+          "max_renewals": 2,
+          "can_renew": false,
+          "renew_block_reasons": [
+            {
+              "code": "HAS_OVERDUE",
+              "message": "Độc giả đang có tài liệu quá hạn: 'Nguyên lý Marketing'.",
+              "suggestion": "Trả tài liệu quá hạn và nộp phí phạt (28.000đ) tại quầy trước, sau đó mới gia hạn được."
+            }
+          ]
+        },
+        {
+          "book_id": "B007",
+          "title": "Dế Mèn phiêu lưu ký",
+          "borrow_date": "09/09/2026",
+          "due_date": "23/09/2026",
+          "days_left": 8,
+          "status": "ON_TIME",
+          "overdue_days": 0,
+          "fine_estimate": 0,
+          "renewals_used": 0,
+          "max_renewals": 2,
+          "can_renew": false,
+          "renew_block_reasons": [
+            {
+              "code": "HAS_OVERDUE",
+              "message": "Độc giả đang có tài liệu quá hạn: 'Nguyên lý Marketing'.",
+              "suggestion": "Trả tài liệu quá hạn và nộp phí phạt (28.000đ) tại quầy trước, sau đó mới gia hạn được."
+            }
+          ]
+        }
+      ],
+      "total_fine": 28000,
+      "reservations": [],
+      "warnings": [
+        "'Nguyên lý Marketing' đã quá hạn 14 ngày, phí phạt tạm tính 28.000đ. Cần trả và nộp phạt ngay."
+      ]
+    },
+    "latency_ms": 2490.88,
+    "tool_latency_ms": 0.3
+  },
+  {
+    "step": 2,
+    "query": "MSSV của mình là 21010489. Mình đang mượn những sách nào, có cuốn nào sắp tới hạn hay bị phạt không?",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Gemini tổng hợp câu trả lời bằng văn bản (không cần gọi thêm công cụ).",
+    "output": "Chào bạn **Vũ Đức Huy** (MSSV: 21010489),\n\nHiện tại bạn đang mượn **2 cuốn sách** với thông tin chi tiết như sau:\n\n1. **Nguyên lý Marketing** (Mã sách: `B005`)\n   - **Hạn trả:** 01/09/2026\n   - **Trạng thái:** ⚠️ **QUÁ HẠN 14 NÀY**\n   - **Phí phạt tạm tính:** 28.000 VNĐ (tính 2.000 VNĐ/ngày).\n   - 👉 **Cảnh báo & Hướng xử lý:** Bạn cần mang sách ra quầy thư viện để trả và nộp phí phạt càng sớm càng tốt để tránh phát sinh thêm phí phạt. Vì đang có cuốn quá hạn, bạn sẽ không thể gia hạn cuốn sách khác.\n\n2. **Dế Mèn phiêu lưu ký** (Mã sách: `B007`)\n   - **Hạn trả:** 23/09/2026\n   - **Trạng thái:** ✅ Đang trong thời hạn (còn 8 ngày).\n   - **Phí phạt:** 0 VNĐ.\n\n---\n**Tổng phí phạt tạm tính:** 28.000 VNĐ  \n**Trạng thái tài khoản:** Hoạt động bình thường (chưa bị khóa).",
+    "latency_ms": 5856.96
+  },
+  {
+    "step": 1,
+    "query": "Mình là 21010245, gia hạn giúp mình tất cả sách đang mượn nhé.",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: get_borrow_record({\"student_id\": \"21010245\"})",
+    "tool_name": "get_borrow_record",
+    "arguments": {
+      "student_id": "21010245"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "today": "15/09/2026",
+      "student_id": "21010245",
+      "full_name": "Trần Quốc Bảo",
+      "account_locked": false,
+      "lock_reason": null,
+      "borrowed_count": 2,
+      "max_books": 5,
+      "loans": [
+        {
+          "book_id": "B002",
+          "title": "Deep Learning cơ bản",
+          "borrow_date": "05/09/2026",
+          "due_date": "19/09/2026",
+          "days_left": 4,
+          "status": "ON_TIME",
+          "overdue_days": 0,
+          "fine_estimate": 0,
+          "renewals_used": 0,
+          "max_renewals": 2,
+          "can_renew": false,
+          "renew_block_reasons": [
+            {
+              "code": "RESERVED_BY_OTHERS",
+              "message": "Cuốn sách này đang có độc giả khác đặt giữ.",
+              "suggestion": "Vui lòng trả sách đúng hạn (19/09/2026) để nhường lượt cho người đặt giữ."
+            }
+          ]
+        },
+        {
+          "book_id": "B004",
+          "title": "Kinh tế vi mô",
+          "borrow_date": "01/09/2026",
+          "due_date": "22/09/2026",
+          "days_left": 7,
+          "status": "ON_TIME",
+          "overdue_days": 0,
+          "fine_estimate": 0,
+          "renewals_used": 1,
+          "max_renewals": 2,
+          "can_renew": true,
+          "renew_block_reasons": []
+        }
+      ],
+      "total_fine": 0,
+      "reservations": [],
+      "warnings": []
+    },
+    "latency_ms": 3650.74,
+    "tool_latency_ms": 0.22
+  },
+  {
+    "step": 2,
+    "query": "Mình là 21010245, gia hạn giúp mình tất cả sách đang mượn nhé.",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: renew_book({\"book_id\": \"B004\", \"student_id\": \"21010245\"})",
+    "tool_name": "renew_book",
+    "arguments": {
+      "book_id": "B004",
+      "student_id": "21010245"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "book_id": "B004",
+      "title": "Kinh tế vi mô",
+      "old_due_date": "22/09/2026",
+      "new_due_date": "29/09/2026",
+      "renewals_used": 2,
+      "renewals_left": 0,
+      "message": "Gia hạn thành công 'Kinh tế vi mô'. Hạn trả mới: 29/09/2026."
+    },
+    "latency_ms": 3562.43,
+    "tool_latency_ms": 0.17
+  },
+  {
+    "step": 3,
+    "query": "Mình là 21010245, gia hạn giúp mình tất cả sách đang mượn nhé.",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: renew_book({\"book_id\": \"B002\", \"student_id\": \"21010245\"})",
+    "tool_name": "renew_book",
+    "arguments": {
+      "book_id": "B002",
+      "student_id": "21010245"
+    },
+    "observation": {
+      "status": "REJECTED",
+      "book_id": "B002",
+      "title": "Deep Learning cơ bản",
+      "due_date": "19/09/2026",
+      "reasons": [
+        {
+          "code": "RESERVED_BY_OTHERS",
+          "message": "Cuốn sách này đang có độc giả khác đặt giữ.",
+          "suggestion": "Vui lòng trả sách đúng hạn (19/09/2026) để nhường lượt cho người đặt giữ."
+        }
+      ]
+    },
+    "latency_ms": 2475.71,
+    "tool_latency_ms": 0.14
+  },
+  {
+    "step": 4,
+    "query": "Mình là 21010245, gia hạn giúp mình tất cả sách đang mượn nhé.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Gemini tổng hợp câu trả lời bằng văn bản (không cần gọi thêm công cụ).",
+    "output": "Chào bạn **Trần Quốc Bảo** (MSSV: 21010245),\n\nDưới đây là kết quả xử lý gia hạn cho **tất cả 02 cuốn sách** bạn đang mượn:\n\n---\n\n### 1. Gia hạn THÀNH CÔNG (01 cuốn)\n* **Tên sách:** *Kinh tế vi mô* (Mã sách: `B004`)\n* **Hạn trả cũ:** 22/09/2026\n* **Hạn trả mới:** **29/09/2026** *(thêm 7 ngày)*\n* **Số lần gia hạn còn lại:** 0/2 lần.\n\n---\n\n### 2. Gia hạn KHÔNG THÀNH CÔNG (01 cuốn)\n* **Tên sách:** *Deep Learning cơ bản* (Mã sách: `B002`)\n* **Lý do từ chối:** Cuốn sách này đang có độc giả khác đặt giữ.\n* **Hướng xử lý:** Vui lòng mang sách đến trả đúng hạn hiện tại là **19/09/2026** để nhường lượt cho người đặt giữ.\n\n---\nNếu cần hỗ trợ thêm thông tin gì khác, bạn cứ báo cho mình nhé!",
+    "latency_ms": 4915.6
+  },
+  {
+    "step": 1,
+    "query": "Gia hạn giúp mình cuốn 'Dế Mèn phiêu lưu ký' với, MSSV 21010489.",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: get_borrow_record({\"student_id\": \"21010489\"})",
+    "tool_name": "get_borrow_record",
+    "arguments": {
+      "student_id": "21010489"
+    },
+    "observation": {
+      "status": "SUCCESS",
+      "today": "15/09/2026",
+      "student_id": "21010489",
+      "full_name": "Vũ Đức Huy",
+      "account_locked": false,
+      "lock_reason": null,
+      "borrowed_count": 2,
+      "max_books": 5,
+      "loans": [
+        {
+          "book_id": "B005",
+          "title": "Nguyên lý Marketing",
+          "borrow_date": "18/08/2026",
+          "due_date": "01/09/2026",
+          "days_left": -14,
+          "status": "OVERDUE",
+          "overdue_days": 14,
+          "fine_estimate": 28000,
+          "renewals_used": 0,
+          "max_renewals": 2,
+          "can_renew": false,
+          "renew_block_reasons": [
+            {
+              "code": "HAS_OVERDUE",
+              "message": "Độc giả đang có tài liệu quá hạn: 'Nguyên lý Marketing'.",
+              "suggestion": "Trả tài liệu quá hạn và nộp phí phạt (28.000đ) tại quầy trước, sau đó mới gia hạn được."
+            }
+          ]
+        },
+        {
+          "book_id": "B007",
+          "title": "Dế Mèn phiêu lưu ký",
+          "borrow_date": "09/09/2026",
+          "due_date": "23/09/2026",
+          "days_left": 8,
+          "status": "ON_TIME",
+          "overdue_days": 0,
+          "fine_estimate": 0,
+          "renewals_used": 0,
+          "max_renewals": 2,
+          "can_renew": false,
+          "renew_block_reasons": [
+            {
+              "code": "HAS_OVERDUE",
+              "message": "Độc giả đang có tài liệu quá hạn: 'Nguyên lý Marketing'.",
+              "suggestion": "Trả tài liệu quá hạn và nộp phí phạt (28.000đ) tại quầy trước, sau đó mới gia hạn được."
+            }
+          ]
+        }
+      ],
+      "total_fine": 28000,
+      "reservations": [],
+      "warnings": [
+        "'Nguyên lý Marketing' đã quá hạn 14 ngày, phí phạt tạm tính 28.000đ. Cần trả và nộp phạt ngay."
+      ]
+    },
+    "latency_ms": 2570.46,
+    "tool_latency_ms": 0.22
+  },
+  {
+    "step": 2,
+    "query": "Gia hạn giúp mình cuốn 'Dế Mèn phiêu lưu ký' với, MSSV 21010489.",
+    "action_type": "TOOL_EXECUTION",
+    "thought": "Gemini quyết định gọi công cụ: renew_book({\"student_id\": \"21010489\", \"book_id\": \"B007\"})",
+    "tool_name": "renew_book",
+    "arguments": {
+      "student_id": "21010489",
+      "book_id": "B007"
+    },
+    "observation": {
+      "status": "REJECTED",
+      "book_id": "B007",
+      "title": "Dế Mèn phiêu lưu ký",
+      "due_date": "23/09/2026",
+      "reasons": [
+        {
+          "code": "HAS_OVERDUE",
+          "message": "Độc giả đang có tài liệu quá hạn: 'Nguyên lý Marketing'.",
+          "suggestion": "Trả tài liệu quá hạn và nộp phí phạt (28.000đ) tại quầy trước, sau đó mới gia hạn được."
+        }
+      ]
+    },
+    "latency_ms": 4768.6,
+    "tool_latency_ms": 0.14
+  },
+  {
+    "step": 3,
+    "query": "Gia hạn giúp mình cuốn 'Dế Mèn phiêu lưu ký' với, MSSV 21010489.",
+    "action_type": "FINAL_ANSWER",
+    "thought": "Gemini tổng hợp câu trả lời bằng văn bản (không cần gọi thêm công cụ).",
+    "output": "Rất tiếc, yêu cầu gia hạn cuốn **\"Dế Mèn phiêu lưu ký\"** của bạn **không thành công** (bị từ chối).\n\n**Lý do:**\n* Bạn đang có tài liệu quá hạn là cuốn **\"Nguyên lý Marketing\"** (quá hạn 14 ngày, phí phạt tạm tính: **28.000đ**).\n* Theo quy định của thư viện, bạn không thể gia hạn sách khi đang có tài liệu quá hạn.\n\n**Hướng xử lý:**\n* Vui lòng mang cuốn **\"Nguyên lý Marketing\"** đến quầy thư viện để trả sách và nộp khoản phí phạt (28.000đ).\n* Sau khi xử lý xong tài liệu quá hạn, bạn mới có thể thực hiện gia hạn cuốn **\"Dế Mèn phiêu lưu ký\"** (hạn trả hiện tại của cuốn này là **23/09/2026**).",
+    "latency_ms": 4040.6
   }
 ]
